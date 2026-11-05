@@ -1,19 +1,11 @@
-# flutter-stylizer - Mothballed/Archived Plugin
+# flutter-stylizer
 
 [![CodeQL](https://github.com/gmlewis/flutter-stylizer/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/gmlewis/flutter-stylizer/actions/workflows/codeql-analysis.yml)
 
 Flutter Stylizer is a VSCode extension that organizes your Flutter classes
 in an opinionated and consistent manner.
 
-Note that as of release `0.1.1`, there is now a standalone version of
-`flutter-stylizer` (with identical output to this plugin) that is available here:
-- https://github.com/gmlewis/go-flutter-stylizer
-
-## Status
-
-After 5 years, 119K installs, 4.9/5 stars, and zero sponsors, this project
-is now mothballed and archived. Feel free to fork the project to create your
-own version of the plugin and add your own customizations to your liking.
+Based on the original work by gmlewis, this version is maintained by Pirilampo Mestre Studio.
 
 ## Features
 
@@ -173,6 +165,16 @@ This plugin does not have a full-featured Dart syntax tree parser.
 As a result, it may come across Dart code that it doesn't handle properly.
 See the [Known Issues](#known-issues) section below for more details.
 
+## Building from source
+
+Install npm, then:
+
+```
+npm install
+npm install -g @vscode/vsce
+vsce package
+```
+
 ## Reporting Problems
 
 It is my goal to be able to use this plugin on large group projects, so
@@ -201,6 +203,13 @@ incorporate the fix into the plugin.
   supported even though the Dart compiler can handle it.
 
 ## Release Notes
+
+## 0.2.0
+
+- Recognize Dart class modifiers, `mixin class`, extensions, and extension types, including declarations with primary-constructor headers.
+- Group concise `new` and `factory` constructors with the existing main and named constructor members.
+- Process extension and extension-type members with the existing member ordering; preserve enhanced-enum constants and keep enum processing opt-in.
+- Correct member-boundary detection when a declaration line contains multiple parenthesized expressions, and add compatibility coverage for Dart 3 patterns, records, and switch expressions.
 
 ### v0.1.16
 

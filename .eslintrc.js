@@ -7,14 +7,19 @@ module.exports = {
   "ignorePatterns": ["*.md"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "tsconfig.json",
     "sourceType": "module"
   },
   "plugins": [
     "@typescript-eslint"
   ],
   "rules": {
-    "@typescript-eslint/class-name-casing": "warn",
+    "@typescript-eslint/naming-convention": [
+      "warn",
+      {
+        "selector": "class",
+        "format": ["PascalCase"]
+      }
+    ],
     "@typescript-eslint/semi": [
       "warn",
       "never"

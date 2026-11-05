@@ -153,8 +153,10 @@ export class Class {
   buildMethod: Entity | null = null
   getterMethods: Entity[] = []
 
-  static matchClassOrMixinRE = /^(?:abstract\s+)?(class|mixin)\s+(\S+).*\r?$/
-  static matchClassOrMixinOrEnumRE = /^(?:abstract\s+)?(class|mixin|enum)\s+(\S+).*\r?$/
+  static matchClassOrMixinRE = /^(?:(?:abstract|base|final|interface|sealed)\s+)*(mixin\s+class|class|mixin)\s+([A-Za-z_$][\w$]*)\b.*\r?$/
+  static matchClassOrMixinOrEnumRE = /^(?:(?:abstract|base|final|interface|sealed)\s+)*(mixin\s+class|class|mixin|enum)\s+([A-Za-z_$][\w$]*)\b.*\r?$/
+  static matchClassOrMixinOrExtensionRE = /^(?:(?:abstract|base|final|interface|sealed)\s+)*(?:(mixin\s+class|class|mixin)\s+([A-Za-z_$][\w$]*)\b.*|extension\s+(?:(type)\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)(?:<.*?>)?\s+on\b|on\b).*)\r?$/
+  static matchClassOrMixinOrEnumOrExtensionRE = /^(?:(?:abstract|base|final|interface|sealed)\s+)*(?:(mixin\s+class|class|mixin|enum)\s+([A-Za-z_$][\w$]*)\b.*|extension\s+(?:(type)\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)(?:<.*?>)?\s+on\b|on\b).*)\r?$/
 
   findFeatures(): Error | null {
     this.lines.forEach((line, i) => {
@@ -264,10 +266,8 @@ export class Class {
       }
 
       if (classLevelIndex >= 0) {
-        const i = features.lastIndexOf(s)
-        if (i > 0) {
-          features = features.slice(0, i + s.length)
-        }
+        const featureIndex = features.length - line.classLevelText.length + classLevelIndex
+        features = features.slice(0, featureIndex + s.length)
 
         if (classLevelIndex >= line.classLevelTextOffsets.length) {
           return { err: Error(`programming error: classLevelIndex = ${classLevelIndex} but should be less than ${line.classLevelTextOffsets.length}, line=${line}`) }
@@ -327,7 +327,6 @@ export class Class {
   }
 
   identifyMainConstructor(): Error | null {
-    const className = this.className + '('
     for (let i = 1; i < this.lines.length; i++) {
       const line = this.lines[i]
       if (line.entityType !== EntityType.Unknown || line.isCommentOrString || line.classLevelText === '') {
@@ -368,18 +367,9 @@ export class Class {
         return Error(`programming error: expected fullBuf[${lastCharAbsOffset}]='(' but got '${this.e.fullBuf[lastCharAbsOffset]}'`)
       }
 
-      const classNameIndex = features.indexOf(className)
-      if (classNameIndex < 0) {
+      if (this.constructorEntityType(features) !== EntityType.MainConstructor) {
         advanceToNextLineIndex()
         continue
-      }
-
-      if (classNameIndex > 0) {
-        const char = features[classNameIndex - 1]
-        if (!/\s/.test(char)) {
-          advanceToNextLineIndex()
-          continue
-        }
       }
 
       if (line.entityType > EntityType.MainConstructor) {
@@ -391,8 +381,9 @@ export class Class {
       this.e.logf(`identifyMainConstructor: marking line #${i + 1} as type MainConstructor`)
       line.entityType = EntityType.MainConstructor
 
-      this.e.logf(`identifyMainConstructor: calling markMethod(line #${i + 1}, className='${className}', MainConstructor)`)
-      const [tc, err2] = this.markMethod(i, className, EntityType.MainConstructor, lastCharAbsOffset)
+      const constructorName = `${features.substring(0, features.lastIndexOf('(')).trim()}(`
+      this.e.logf(`identifyMainConstructor: calling markMethod(line #${i + 1}, className='${constructorName}', MainConstructor)`)
+      const [tc, err2] = this.markMethod(i, constructorName, EntityType.MainConstructor, lastCharAbsOffset)
       if (err2 !== null) {
         return err2
       }
@@ -403,8 +394,26 @@ export class Class {
     return null
   }
 
+  constructorEntityType(features: string): EntityType | null {
+    const signature = features.substring(0, features.lastIndexOf('(')).trim()
+    if (/^(?:const\s+)?new$/.test(signature) || signature === 'factory') {
+      return EntityType.MainConstructor
+    }
+    if (/^(?:const\s+)?new\s+[A-Za-z_$][\w$]*$/.test(signature) || /^factory\s+[A-Za-z_$][\w$]*$/.test(signature)) {
+      return EntityType.NamedConstructor
+    }
+
+    const declaration = signature.replace(/^(?:(?:const|external|factory)\s+)*/, '')
+    if (this.className && declaration === this.className) {
+      return EntityType.MainConstructor
+    }
+    if (this.className && declaration.startsWith(`${this.className}.`) && /^[A-Za-z_$][\w$]*$/.test(declaration.substring(this.className.length + 1))) {
+      return EntityType.NamedConstructor
+    }
+    return null
+  }
+
   identifyNamedConstructors(): Error | null {
-    const className = this.className + '.'
     for (let i = 1; i < this.lines.length; i++) {
       const line = this.lines[i]
       if (line.entityType !== EntityType.Unknown || line.isCommentOrString || line.classLevelText === '') {
@@ -447,20 +456,13 @@ export class Class {
         return Error(`programming error: expected fullBuf[${lastCharAbsOffset}]='(' but got 'this.e.fullBuf[lastCharAbsOffset]'`)
       }
 
-      const classNameIndex = features.indexOf(className)
-      if (classNameIndex < 0) {
+      if (this.constructorEntityType(features) !== EntityType.NamedConstructor) {
         advanceToNextLineIndex()
         continue
       }
 
-      const leadingText = features.substring(0, classNameIndex)
-      const namedConstructor = features.substring(classNameIndex)
-      this.e.logf(`identifyNamedConstructors: leadingText='${leadingText}', classNameIndex=${classNameIndex}, namedConstructor='${namedConstructor}', lastCharAbsOffset=${lastCharAbsOffset}, features='${features}'`)
-
-      if (/[\?\:]/g.test(leadingText)) {
-        advanceToNextLineIndex()
-        continue
-      }
+      const namedConstructor = `${features.substring(0, features.lastIndexOf('(')).trim()}(`
+      this.e.logf(`identifyNamedConstructors: namedConstructor='${namedConstructor}', lastCharAbsOffset=${lastCharAbsOffset}, features='${features}'`)
 
       if (this.lines[i].entityType >= EntityType.MainConstructor && this.lines[i].entityType !== EntityType.NamedConstructor) {
         const err = this.repairIncorrectlyLabeledLine(i)
@@ -698,6 +700,9 @@ export class Class {
         break
       case staticKeyword:
         entity.entityType = EntityType.StaticVariable
+        break
+      case (this.classType === 'extension' || this.classType === 'extension type') && !staticKeyword:
+        entity.entityType = EntityType.LeaveUnmodified
         break
       case privateVar:
         entity.entityType = EntityType.PrivateInstanceVariable

@@ -18,7 +18,7 @@ import * as assert from 'assert'
 import * as vscode from 'vscode'
 
 import { Class } from '../../../dart/class'
-import { defaultMemberOrdering, Client, Options } from '../../../dart/dart'
+import { Client, defaultMemberOrdering, Options } from '../../../dart/dart'
 import { Editor } from '../../../dart/editor'
 import { EntityType } from '../../../dart/entity'
 import { setupEditor } from './editor.test'
@@ -126,8 +126,146 @@ mixin myMixin {
 })
 
 suite('Class Tests', () => {
-  var myExtDir = (vscode.extensions.getExtension('gmlewis-vscode.flutter-stylizer') || {}).extensionPath || process.env.VSCODE_CWD
+  var myExtDir = (vscode.extensions.getExtension('pirilampo-mestre-studio.flutter-stylizer') || {}).extensionPath || process.env.VSCODE_CWD
   const testfilesDir = path.join(myExtDir, 'src', 'test', 'suite', 'testfiles')
+
+  test('Modern declarations are found', () => {
+    const source = `base class BaseClass {}
+final class FinalClass {}
+abstract interface class InterfaceClass {}
+sealed class SealedClass {}
+mixin class MixinClass {}
+base mixin class MixinPoint(var int x) {}
+extension StringExtensions on String {}
+extension type Meters(int value) {}
+final class PrimaryPoint(var int x) {}
+class HeaderOnly(var int x);`
+
+    const e = new Editor(source, false, false)
+    const [classes, err] = e.getClasses(false, false)
+    assert.strictEqual(err, null)
+    assert.ok(e.classLineIndices.some((index) => e.lines[index].stripped === 'class HeaderOnly(var int x);'))
+    assert.deepStrictEqual(classes.map((item) => [item.classType, item.className]), [
+      ['class', 'BaseClass'],
+      ['class', 'FinalClass'],
+      ['class', 'InterfaceClass'],
+      ['class', 'SealedClass'],
+      ['class', 'MixinClass'],
+      ['class', 'MixinPoint'],
+      ['extension', 'StringExtensions'],
+      ['extension type', 'Meters'],
+      ['class', 'PrimaryPoint'],
+    ])
+  })
+
+  test('Concise constructors are grouped', () => {
+    const examples: [string, EntityType[]][] = [
+      ['class Point {\n  new(this.x);\n}', [EntityType.Unknown, EntityType.MainConstructor, EntityType.BlankLine]],
+      ['class Point {\n  const new(this.x);\n}', [EntityType.Unknown, EntityType.MainConstructor, EntityType.BlankLine]],
+      ['class Point {\n  factory(this.x);\n}', [EntityType.Unknown, EntityType.MainConstructor, EntityType.BlankLine]],
+      ['class Point {\n  new origin();\n}', [EntityType.Unknown, EntityType.NamedConstructor, EntityType.BlankLine]],
+      ['class Point {\n  const new named();\n}', [EntityType.Unknown, EntityType.NamedConstructor, EntityType.BlankLine]],
+      ['class Point {\n  factory clone(Point other) => Point(other.x);\n}', [EntityType.Unknown, EntityType.NamedConstructor, EntityType.BlankLine]],
+      ['class Point {\n  Point.legacy();\n}', [EntityType.Unknown, EntityType.NamedConstructor, EntityType.BlankLine]],
+    ]
+
+    examples.forEach(([source, want]) => runParsePhase(null, source, [want]))
+  })
+
+  test('Extension members and enum primary constructors are preserved', () => {
+    const extensionSource = `extension on String {
+  String capitalize() => this;
+  String operator +(String other) => this + other;
+}`
+    const extensionWant: EntityType[] = [
+      EntityType.Unknown,
+      EntityType.OtherMethod,
+      EntityType.OtherMethod,
+      EntityType.BlankLine,
+    ]
+    runParsePhase(null, extensionSource, [extensionWant])
+
+    const extensionTypeSource = `extension type Meters(int value) {
+  Meters.zero() : this(0);
+  external int first;
+  external int second;
+  int get doubled => value * 2;
+  Meters operator +(Meters other) => Meters(value + other.value);
+}`
+    const extensionTypeWant: EntityType[] = [
+      EntityType.Unknown,
+      EntityType.NamedConstructor,
+      EntityType.LeaveUnmodified,
+      EntityType.LeaveUnmodified,
+      EntityType.OtherMethod,
+      EntityType.OtherMethod,
+      EntityType.BlankLine,
+    ]
+    runParsePhase(null, extensionTypeSource, [extensionTypeWant])
+
+    const enumSource = `enum Color(final String hex) {
+  red('#f00'),
+  blue('#00f');
+  const Color(this.hex);
+  String get label => hex;
+}`
+    const [enums, err] = new Editor(enumSource, true, false).getClasses(false, false)
+    assert.strictEqual(err, null)
+    assert.strictEqual(enums[0].classType, 'enum')
+    assert.strictEqual(enums[0].className, 'Color')
+    assert.deepStrictEqual(enums[0].lines.map((line) => line.entityType), [
+      EntityType.Unknown,
+      EntityType.LeaveUnmodified,
+      EntityType.LeaveUnmodified,
+      EntityType.MainConstructor,
+      EntityType.OtherMethod,
+      EntityType.BlankLine,
+    ])
+  })
+
+  test('Modified declarations sort with annotations and primary headers', () => {
+    const source = `sealed class Zulu(var int z) {
+  void zed() {}
+}
+
+@Deprecated('keep')
+abstract base class Alpha(var int a) {
+  void alpha() {}
+}`
+    const want = `@Deprecated('keep')
+abstract base class Alpha(var int a) {
+  void alpha() {}
+}
+
+sealed class Zulu(var int z) {
+  void zed() {}
+}`
+    const opts: Options = {
+      MemberOrdering: defaultMemberOrdering,
+      SortClassesWithinFile: true,
+    }
+    runFullStylizer(opts, source, want, null)
+  })
+
+  test('Patterns and records stay within method bodies', () => {
+    const source = `class Syntax {
+  void inspect(Object value) {
+    final pair = (1, 2);
+    final result = switch (value) {
+      (int x, int y) => (x, y),
+      _ => (0, 0),
+    };
+    if (value case [final int first, _]) {
+      print(first);
+    }
+  }
+  void next() {}
+}`
+    const [, classes] = runParsePhase(null, source, null)
+    assert.strictEqual(classes[0].otherAllOrPublicMethods.length, 2)
+    assert.strictEqual(classes[0].otherAllOrPublicMethods[0].lines[0].stripped, 'void inspect(Object value) {')
+    assert.strictEqual(classes[0].otherAllOrPublicMethods[1].lines[0].stripped, 'void next() {}')
+  })
 
   test('Classes are found', () => {
     const source = `// test.dart

@@ -1,28 +1,31 @@
 {
-  "name": "flutter-stylizer",
-  "license": "SEE LICENSE IN LICENSE",
-  "displayName": "flutter-stylizer",
-  "description": "Flutter Stylizer organizes your Flutter classes in an opinionated and consistent manner.",
-  "icon": "images/flutter-stylizer-logo-128x128.png",
-  "version": "0.1.16",
-  "publisher": "gmlewis-vscode",
-  "repository": "https://github.com/gmlewis/flutter-stylizer",
-  "engines": {
-    "vscode": "^1.60.0"
-  },
   "categories": [
     "Other"
+  ],
+  "extensionDependency": [
+    "dart-code.dart-code"
   ],
   "activationEvents": [
     "onCommand:extension.flutterStylizer",
     "onLanguage:dart"
   ],
+  "version": "0.2.0",
   "main": "./out/extension",
+  "name": "flutter-stylizer-modern",
+  "displayName": "Flutter Stylizer Modern",
+  "license": "SEE LICENSE IN LICENSE",
+  "publisher": "pirilampo-mestre-studio",
+  "icon": "images/flutter-stylizer-logo-128x128.png",
+  "repository": "https://github.com/Estudio-Pirilampo-Mestre/flutter-stylizer",
+  "description": "Flutter Stylizer organizes your Flutter classes in an opinionated and consistent manner.",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
   "contributes": {
     "commands": [
       {
-        "command": "extension.flutterStylizer",
-        "title": "Flutter Stylizer"
+        "title": "Flutter Stylizer",
+        "command": "extension.flutterStylizer"
       }
     ],
     "configuration": {
@@ -74,34 +77,28 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "lint": "eslint src --ext ts",
+    "vscode:prepublish": "npm run compile",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "test": "node ./out/test/runTest.js"
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "pretest": "npm run compile && npm run lint"
   },
   "devDependencies": {
     "@types/glob": "^7.1.4",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^16.10.2",
+    "glob": "^7.2.0",
+    "mocha": "^9.1.2",
+    "typescript": "^4.4.3",
+    "vscode-test": "^1.6.1",
     "@types/sinon": "^10.0.4",
     "@types/vscode": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "eslint": "^7.32.0",
-    "glob": "^7.2.0",
-    "mocha": "^9.1.2",
-    "nanoid": ">=3.1.31",
     "sinon": "^11.1.2",
     "tslint": "^5.20.1",
-    "typescript": "^4.4.3",
-    "vscode-test": "^1.6.1"
-  },
-  "extensionDependency": [
-    "dart-code.dart-code"
-  ],
-  "sponsor": {
-    "url": "https://github.com/sponsors/gmlewis"
+    "@types/node": "^16.10.2",
+    "nanoid": ">=3.1.31"
   }
 }

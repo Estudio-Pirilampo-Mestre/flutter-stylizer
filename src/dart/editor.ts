@@ -25,7 +25,7 @@ export class Editor {
   constructor(buf: string, processEnumsLikeClasses: boolean, verbose: boolean) {
     this.fullBuf = buf
     this.verbose = verbose
-    this.classMatcher = processEnumsLikeClasses ? Class.matchClassOrMixinOrEnumRE : Class.matchClassOrMixinRE
+    this.classMatcher = processEnumsLikeClasses ? Class.matchClassOrMixinOrEnumOrExtensionRE : Class.matchClassOrMixinOrExtensionRE
 
     const lines = this.fullBuf.split('\n')
     let lineStartOffset = 0
@@ -63,12 +63,12 @@ export class Editor {
       const lineIndex = this.classLineIndices[i]
       const line = this.lines[lineIndex]
       const mm = this.classMatcher.exec(line.line)
-      if (!mm || mm.length !== 3) {
+      if (!mm) {
         return [[], Error(`programming error: expected class on line #${lineIndex + 1}, got '${line.line}'`)]
       }
 
-      const classType = mm[1]
-      const className = mm[2]
+      const classType = mm[1] ? (mm[1] === 'mixin class' ? 'class' : mm[1]) : mm[3] ? 'extension type' : 'extension'
+      const className = mm[2] || mm[4] || mm[5] || ''
       const classOffset = line.startOffset
       const openCurlyOffset = this.findStartOfClass(classOffset)
       if (this.fullBuf[openCurlyOffset] === ';') { // this is valid and can be ignored: class D = Object with Function;

@@ -6,6 +6,13 @@ this file.
 Please make sure you have a backup (preferably in git) of your code before running
 "Flutter Stylizer" in case it doesn't handle your code properly.
 
+## [0.2.0] - 2026-11-05
+
+- Recognize Dart class modifiers, `mixin class`, extensions, and extension types, including declarations with primary-constructor headers.
+- Group concise `new` and `factory` constructors with the existing main and named constructor members.
+- Process extension and extension-type members with the existing member ordering; preserve enhanced-enum constants and keep enum processing opt-in.
+- Correct member-boundary detection when a declaration line contains multiple parenthesized expressions, and add compatibility coverage for Dart 3 patterns, records, and switch expressions.
+
 ## [0.1.16] - 2022-06-28
 
 - Fix [issue #31](https://github.com/gmlewis/flutter-stylizer/issues/31) for private vars.

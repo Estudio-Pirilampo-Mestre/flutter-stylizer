@@ -22,8 +22,8 @@ import { runFullStylizer } from './class.test'
 const fs = require('fs')
 const path = require('path')
 
-suite('Issue#20 Tests', function() {
-  var myExtDir = (vscode.extensions.getExtension('gmlewis-vscode.flutter-stylizer') || {}).extensionPath || process.env.VSCODE_CWD
+suite('Issue#20 Tests', function () {
+  var myExtDir = (vscode.extensions.getExtension('pirilampo-mestre-studio.flutter-stylizer') || {}).extensionPath || process.env.VSCODE_CWD
   const testfilesDir = path.join(myExtDir, 'src', 'test', 'suite', 'testfiles')
 
   test('Issue#20: spurious lines should not be added - ignore enums', () => {

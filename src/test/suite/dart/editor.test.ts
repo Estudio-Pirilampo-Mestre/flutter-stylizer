@@ -54,8 +54,8 @@ export function setupEditor(searchFor: string, buf: string): [Editor, number, nu
 }
 
 // Defines a Mocha test suite to group tests of similar kind together
-suite('DartEditor Parsing Tests', function() {
-  var myExtDir = (vscode.extensions.getExtension('gmlewis-vscode.flutter-stylizer') || {}).extensionPath || process.env.VSCODE_CWD
+suite('DartEditor Parsing Tests', function () {
+  var myExtDir = (vscode.extensions.getExtension('pirilampo-mestre-studio.flutter-stylizer') || {}).extensionPath || process.env.VSCODE_CWD
   const testfilesDir = path.join(myExtDir, 'src', 'test', 'suite', 'testfiles')
   const basicClasses = fs.readFileSync(path.join(testfilesDir, 'basic_classes.dart.txt'), 'utf8')
   const bcWindoze = fs.readFileSync(path.join(testfilesDir, 'basic_classes.dart.windz.txt'), 'utf8')

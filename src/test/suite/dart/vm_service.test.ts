@@ -31,8 +31,8 @@ const getClass = (src: string, from: string, to: string): string => {
   return src.substring(start, end)
 }
 
-suite('VM Service Tests', function() {
-  var myExtDir = (vscode.extensions.getExtension('gmlewis-vscode.flutter-stylizer') || {}).extensionPath || process.env.VSCODE_CWD
+suite('VM Service Tests', function () {
+  var myExtDir = (vscode.extensions.getExtension('pirilampo-mestre-studio.flutter-stylizer') || {}).extensionPath || process.env.VSCODE_CWD
   const testfilesDir = path.join(myExtDir, 'src', 'test', 'suite', 'testfiles')
 
   test('VM Service get classes', () => {
